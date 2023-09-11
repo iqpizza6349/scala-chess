@@ -57,17 +57,20 @@ object Board {
             (x >= 0 && y >= 0) && (x < BOARD_WIDTH && y < BOARD_HEIGHT)
 
         def getPossibleMoves(color: PieceColor): List[Move] =
-            val moves = List[Move]()
+            var moves = List[Move]()
             for (x <- 0 until BOARD_WIDTH)
                 for (y <- 0 until BOARD_HEIGHT)
                     val piece = this.chessPieces(x)(y)
                     if piece != null then
                         if piece.color == color then
-                            moves.appendedAll(piece.getPossibleMoves(this))
+                            moves = moves.concat(piece.getPossibleMoves(this))
             moves
 
         def performMove(move: Move): Unit = {
             val piece = chessPieces(move.xFrom)(move.yFrom)
+            if (piece == null) {
+                return
+            }
             movePiece(piece, move.xTo, move.yTo)
 
             if piece.pieceType == PAWN then
@@ -104,7 +107,7 @@ object Board {
 
             boundary:
                 for (mv <- getPossibleMoves(otherColor))
-                    val copy = cloneAsOther(this).asInstanceOf[standardBoard]
+                    val copy = clone().asInstanceOf[standardBoard]
                     copy.performMove(mv)
 
                     var kingFound = false
@@ -122,6 +125,8 @@ object Board {
         override def whiteKingMoved: Boolean = this.whiteKingMove
 
         override def blackKingMoved: Boolean = this.blackKingMove
+
+        override def pieces: Array[Array[Piece]] = this.chessPieces
 
         override def toString: String =
             var string = "    A  B  C  D  E  F  G  H\n"
