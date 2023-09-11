@@ -6,8 +6,9 @@ import game.{BOARD_HEIGHT, BOARD_WIDTH}
 
 import scala.util.boundary
 
-abstract class Board {
-    def cloneAsOther(other: Board): Board
+abstract class Board extends Cloneable {
+
+    def copy(): Board
 
     def getPiece(x: Int, y: Int): Piece
 
@@ -25,24 +26,25 @@ abstract class Board {
 
     def blackKingMoved: Boolean
 
+    def pieces: Array[Array[Piece]]
+
     override def toString: String = super.toString
 }
 
 object Board {
     private class standardBoard(var chessPieces: Array[Array[Piece]],
                                 var whiteKingMove: Boolean, var blackKingMove: Boolean) extends Board {
-        override def cloneAsOther(other: Board): Board =
-            chessPieces = Array.fill(BOARD_WIDTH, BOARD_HEIGHT) {
-                null
-            }
-            val otherBoard = other.asInstanceOf[standardBoard]
 
+
+        override def copy(): Board = clone()
+
+        override def clone(): Board =
+            val chessPieces = Array.ofDim[Piece](BOARD_WIDTH, BOARD_HEIGHT)
             for (x <- 0 until BOARD_WIDTH)
                 for (y <- 0 until BOARD_HEIGHT)
-                    val piece = otherBoard.chessPieces(x)(y)
+                    val piece = this.chessPieces(x)(y)
                     if piece != null then
                         chessPieces(x)(y) = piece.clone().asInstanceOf[Piece]
-
             new standardBoard(chessPieces, this.whiteKingMoved, this.blackKingMoved)
 
         override def getPiece(x: Int, y: Int): Piece =
