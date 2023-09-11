@@ -1,7 +1,10 @@
 package org.iqpizza
 
-import org.iqpizza.Type.ROOK
+import Type.{BISHOP, KING, KNIGHT, PAWN, QUEEN, ROOK}
 
+import PieceColor.{BLACK, WHITE}
+
+import scala.collection.mutable.ListBuffer
 import scala.util.control.Breaks
 
 enum Type(val shortcut: String, val worth: Int) {
@@ -17,57 +20,57 @@ abstract class Piece(var x: Int, var y: Int, val color: PieceColor,
                      val pieceType: Type, val worth: Int) extends Cloneable {
 
     def getPossibleDiagonalMoves(board: Board): List[Move] =
-        val moves = List()
+        val moves = ListBuffer[Move]()
         val loop = new Breaks
 
         loop.breakable {
-            for (i <- 1 to 8)
+            for (i <- 1 until 8)
                 if !board.inBounds(x + i, y + i) then
                     loop.break
                 val piece = board.getPiece(x + i, y + i)
-                moves.appended(getMove(board, x + i, y + i))
+                moves += getMove(board, x + i, y + i)
                 if piece != null then
                     loop.break()
         }
 
         loop.breakable {
-            for (i <- 1 to 8)
+            for (i <- 1 until 8)
                 if !board.inBounds(x + i, y - i) then
                     loop.break()
                 val piece = board.getPiece(x + i, y - i)
-                moves.appended(getMove(board, x + i, y - i))
+                moves += getMove(board, x + i, y - i)
                 if piece != null then
                     loop.break()
         }
 
         loop.breakable {
-            for (i <- 1 to 8)
+            for (i <- 1 until 8)
                 if !board.inBounds(x - i, y - i) then
                     loop.break()
                 val piece = board.getPiece(x - i, y - i)
-                moves.appended(getMove(board, x - i, y - i))
+                moves += getMove(board, x - i, y - i)
                 if piece != null then
                     loop.break()
         }
 
         loop.breakable {
-            for (i <- 1 to 8)
+            for (i <- 1 until 8)
                 if !board.inBounds(x - i, y + i) then
                     loop.break()
                 val piece = board.getPiece(x - i, y + i)
-                moves.appended(getMove(board, x - i, y + i))
+                moves += getMove(board, x - i, y + i)
                 if piece != null then
                     loop.break()
         }
 
-        removeNullFromMoves(moves)
+        removeNullFromMoves(moves.toList)
 
     def getPossibleHorizontalMoves(board: Board): List[Move] =
         val moves = List()
         val loop = new Breaks
 
         loop.breakable {
-            for (i <- 1 to 8 - x)
+            for (i <- 1 until 8 - x)
                 val piece = board.getPiece(x + i, y)
                 moves.appended(getMove(board, x + i, y))
                 if piece != null then
@@ -75,7 +78,7 @@ abstract class Piece(var x: Int, var y: Int, val color: PieceColor,
         }
 
         loop.breakable {
-            for (i <- 1 to 8)
+            for (i <- 1 until 8)
                 val piece = board.getPiece(x - i, y)
                 moves.appended(getMove(board, x - i, y))
                 if piece != null then
@@ -83,7 +86,7 @@ abstract class Piece(var x: Int, var y: Int, val color: PieceColor,
         }
 
         loop.breakable {
-            for (i <- 1 to 8)
+            for (i <- 1 until 8)
                 val piece = board.getPiece(x, y + i)
                 moves.appended(getMove(board, x, y + i))
                 if piece != null then
@@ -91,7 +94,7 @@ abstract class Piece(var x: Int, var y: Int, val color: PieceColor,
         }
 
         loop.breakable {
-            for (i <- 1 to 8)
+            for (i <- 1 until 8)
                 val piece = board.getPiece(x, y - i)
                 moves.appended(getMove(board, x, y - i))
                 if piece != null then
