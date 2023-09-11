@@ -2,97 +2,172 @@ package org.iqpizza
 
 import PieceColor.{BLACK, WHITE}
 import Type.{KING, PAWN}
+import game.{BOARD_HEIGHT, BOARD_WIDTH}
 
-class Board(var chessPieces: Array[Array[Piece]], var whiteKingMoved: Boolean,
-            var blackKingMoved: Boolean) {
+import scala.util.boundary
 
-    def cloneAsOther(other: Board): Board =
-        chessPieces = Array.fill(game.BOARD_WIDTH, game.BOARD_HEIGHT) { null }
-        for (x <- 0 to game.BOARD_WIDTH)
-            for (y <- 0 to game.BOARD_HEIGHT)
-                val piece = other.chessPieces(x)(y)
-                if piece != null then
-                    chessPieces(x)(y) = piece.clone().asInstanceOf[Piece]
+abstract class Board {
+    def cloneAsOther(other: Board): Board
 
-        new Board(chessPieces, this.whiteKingMoved, this.blackKingMoved)
+    def getPiece(x: Int, y: Int): Piece
 
+    def inBounds(x: Int, y: Int): Boolean
 
-    def getPiece(x: Int, y: Int): Piece =
-        if !inBounds(x, y) then
-            null
-        else
-            chessPieces(x)(y)
+    def getPossibleMoves(color: PieceColor): List[Move]
 
-    def inBounds(x: Int, y: Int): Boolean =
-        (x >= 0 && y >= 0) && (x < game.BOARD_WIDTH && y < game.BOARD_HEIGHT)
+    def performMove(move: Move): Unit
 
-    def createBoard(): Board =
-        var chessPieces = Array.ofDim[Piece](game.BOARD_WIDTH, game.BOARD_HEIGHT)
+    def movePiece(piece: Piece, xTo: Int, yTo: Int): Unit
 
-        //TODO: piece children class
+    def isCheck(color: PieceColor): Boolean
 
-        new Board(chessPieces, false, false)
+    def whiteKingMoved: Boolean
 
-    def getPossibleMoves(color: PieceColor): List[Move] =
-        val moves = List[Move]()
-        for (x <- 0 to game.BOARD_WIDTH)
-            for (y <- 0 to game.BOARD_HEIGHT)
-                val piece = this.chessPieces(x)(y)
-                if piece != null then
-                    if piece.color == color then
-                        moves.appendedAll(piece.getPossibleMoves(this))
-        moves
+    def blackKingMoved: Boolean
 
-    def performMove(move: Move): Unit = {
-        val piece = chessPieces(move.xFrom)(move.yFrom)
-        movePiece(piece, move.xTo, move.yTo)
+    override def toString: String = super.toString
+}
 
-        if piece.pieceType == PAWN then
-            if piece.y == 0 || piece.y == game.BOARD_HEIGHT - 1 then
-                throw UnsupportedOperationException("Not Implemented that pawn is change to queen")
-//                chessPieces(piece.x)(piece.y) =
-        if piece.pieceType == KING then
-            // mark the king as having moved.
-            if piece.color == WHITE then
-                whiteKingMoved = true
-            else
-                blackKingMoved = true
+object Board {
+    private class standardBoard(var chessPieces: Array[Array[Piece]],
+                                var whiteKingMove: Boolean, var blackKingMove: Boolean) extends Board {
+        override def cloneAsOther(other: Board): Board =
+            chessPieces = Array.fill(BOARD_WIDTH, BOARD_HEIGHT) {
+                null
+            }
+            val otherBoard = other.asInstanceOf[standardBoard]
 
-            if move.xTo - move.xFrom == 2 then
-                // check king side castling
-                val rook = chessPieces(piece.x + 1)(piece.y)
-                movePiece(rook, piece.x + 1, piece.y)
-            if move.xTo - move.xFrom == -2 then
-                // check queen side castling
-                val rook = chessPieces(piece.x - 2)(piece.y)
-                movePiece(rook, piece.x + 1, piece.y)
-    }
-
-    def movePiece(piece: Piece, xTo: Int, yTo: Int): Unit = {
-        chessPieces(piece.x)(piece.y) = null
-        piece.x = xTo
-        piece.y = yTo
-        chessPieces(xTo)(yTo) = piece
-    }
-
-    def isCheck(color: PieceColor): Boolean =
-        var otherColor: PieceColor = WHITE
-        if color == WHITE then
-            otherColor = BLACK
-
-        for (mv <- getPossibleMoves(otherColor))
-            val copy = cloneAsOther(this)
-            copy.performMove(mv)
-
-            var kingFound = false
-            for (x <- 0 to game.BOARD_WIDTH)
-                for (y <- 0 to game.BOARD_HEIGHT)
-                    val piece = copy.chessPieces(x)(y)
+            for (x <- 0 until BOARD_WIDTH)
+                for (y <- 0 until BOARD_HEIGHT)
+                    val piece = otherBoard.chessPieces(x)(y)
                     if piece != null then
-                        if piece.color == color && piece.pieceType == KING then
-                            kingFound = true
+                        chessPieces(x)(y) = piece.clone().asInstanceOf[Piece]
 
-            if !kingFound then
-                return true
-        false
+            new standardBoard(chessPieces, this.whiteKingMoved, this.blackKingMoved)
+
+        override def getPiece(x: Int, y: Int): Piece =
+            if !inBounds(x, y) then
+                null
+            else
+                chessPieces(x)(y)
+
+        override def inBounds(x: Int, y: Int): Boolean =
+            (x >= 0 && y >= 0) && (x < BOARD_WIDTH && y < BOARD_HEIGHT)
+
+        def getPossibleMoves(color: PieceColor): List[Move] =
+            val moves = List[Move]()
+            for (x <- 0 until BOARD_WIDTH)
+                for (y <- 0 until BOARD_HEIGHT)
+                    val piece = this.chessPieces(x)(y)
+                    if piece != null then
+                        if piece.color == color then
+                            moves.appendedAll(piece.getPossibleMoves(this))
+            moves
+
+        def performMove(move: Move): Unit = {
+            val piece = chessPieces(move.xFrom)(move.yFrom)
+            movePiece(piece, move.xTo, move.yTo)
+
+            if piece.pieceType == PAWN then
+                if piece.y == 0 || piece.y == BOARD_HEIGHT - 1 then
+                    chessPieces(piece.x)(piece.y) = Queen(piece.x, piece.y, piece.color)
+            if piece.pieceType == KING then
+                // mark the king as having moved.
+                if piece.color == WHITE then
+                    whiteKingMove = true
+                else
+                    blackKingMove = true
+
+                if move.xTo - move.xFrom == 2 then
+                    // check king side castling
+                    val rook = chessPieces(piece.x + 1)(piece.y)
+                    movePiece(rook, piece.x + 1, piece.y)
+                if move.xTo - move.xFrom == -2 then
+                    // check queen side castling
+                    val rook = chessPieces(piece.x - 2)(piece.y)
+                    movePiece(rook, piece.x + 1, piece.y)
+        }
+
+        def movePiece(piece: Piece, xTo: Int, yTo: Int): Unit = {
+            chessPieces(piece.x)(piece.y) = null
+            piece.x = xTo
+            piece.y = yTo
+            chessPieces(xTo)(yTo) = piece
+        }
+
+        def isCheck(color: PieceColor): Boolean =
+            var otherColor: PieceColor = WHITE
+            if color == WHITE then
+                otherColor = BLACK
+
+            boundary:
+                for (mv <- getPossibleMoves(otherColor))
+                    val copy = cloneAsOther(this).asInstanceOf[standardBoard]
+                    copy.performMove(mv)
+
+                    var kingFound = false
+                    for (x <- 0 until BOARD_WIDTH)
+                        for (y <- 0 until BOARD_HEIGHT)
+                            val piece = copy.chessPieces(x)(y)
+                            if piece != null then
+                                if piece.color == color && piece.pieceType == KING then
+                                    kingFound = true
+
+                    if !kingFound then
+                        boundary.break(true)
+                false
+
+        override def whiteKingMoved: Boolean = this.whiteKingMove
+
+        override def blackKingMoved: Boolean = this.blackKingMove
+
+        override def toString: String =
+            var string = "    A  B  C  D  E  F  G  H\n"
+            string += "    -----------------------\n"
+            for (y <- 0 until BOARD_HEIGHT)
+                string += (8 - y) + " | "
+                for (x <- 0 until BOARD_WIDTH)
+                    val piece = chessPieces(x)(y)
+                    if piece != null then string += piece.toString
+                    else string += ".. "
+                string += "\n"
+            string + "\n"
+    }
+
+    private def standardBoard: Array[Array[Piece]] =
+        val chessPieces = Array.ofDim[Piece](BOARD_WIDTH, BOARD_HEIGHT)
+
+        // pawns
+        for (x <- 0 until BOARD_WIDTH)
+            chessPieces(x)(BOARD_HEIGHT - 2) = Pawn(x, BOARD_HEIGHT - 2, WHITE)
+            chessPieces(x)(1) = Pawn(x, 1, BLACK)
+
+        // rooks
+        chessPieces(0)(BOARD_HEIGHT - 1) = Rook(0, BOARD_HEIGHT - 1, WHITE)
+        chessPieces(BOARD_WIDTH - 1)(BOARD_HEIGHT - 1) = Rook(BOARD_WIDTH - 1, BOARD_HEIGHT - 1, WHITE)
+        chessPieces(0)(0) = Rook(0, 0, BLACK)
+        chessPieces(BOARD_WIDTH - 1)(0) = Rook(BOARD_WIDTH - 1, 0, BLACK)
+
+        // knights
+        chessPieces(1)(BOARD_HEIGHT - 1) = Knight(1, BOARD_HEIGHT - 1, WHITE)
+        chessPieces(BOARD_WIDTH - 2)(BOARD_HEIGHT - 1) = Knight(BOARD_WIDTH - 2, BOARD_HEIGHT - 1, WHITE)
+        chessPieces(1)(0) = Knight(1, 0, BLACK)
+        chessPieces(BOARD_WIDTH - 2)(0) = Knight(BOARD_WIDTH - 2, 0, BLACK)
+
+        // bishops
+        chessPieces(2)(BOARD_HEIGHT - 1) = Bishop(2, BOARD_HEIGHT - 1, WHITE)
+        chessPieces(BOARD_WIDTH - 3)(BOARD_HEIGHT - 1) = Bishop(BOARD_WIDTH - 3, BOARD_HEIGHT - 1, WHITE)
+        chessPieces(2)(0) = Bishop(2, 0, BLACK)
+        chessPieces(BOARD_WIDTH - 3)(0) = Bishop(BOARD_WIDTH - 3, 0, BLACK)
+
+        // kings and queens
+        chessPieces(4)(BOARD_HEIGHT - 1) = King(4, BOARD_HEIGHT - 1, WHITE)
+        chessPieces(3)(BOARD_HEIGHT - 1) = Queen(3, BOARD_HEIGHT - 1, WHITE)
+        chessPieces(4)(0) = King(4, 0, BLACK)
+        chessPieces(3)(0) = Queen(3, 0, BLACK)
+        chessPieces
+
+    def apply(): Board = {
+        new standardBoard(standardBoard, false, false)
+    }
 }
