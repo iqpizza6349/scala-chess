@@ -66,42 +66,42 @@ abstract class Piece(var x: Int, var y: Int, val color: PieceColor,
         removeNullFromMoves(moves.toList)
 
     def getPossibleHorizontalMoves(board: Board): List[Move] =
-        val moves = List()
+        val moves = ListBuffer[Move]()
         val loop = new Breaks
 
         loop.breakable {
             for (i <- 1 until 8 - x)
                 val piece = board.getPiece(x + i, y)
-                moves.appended(getMove(board, x + i, y))
+                moves += getMove(board, x + i, y)
                 if piece != null then
                     loop.break()
         }
 
         loop.breakable {
-            for (i <- 1 until 8)
+            for (i <- 1 until x + 1)
                 val piece = board.getPiece(x - i, y)
-                moves.appended(getMove(board, x - i, y))
+                moves += getMove(board, x - i, y)
                 if piece != null then
                     loop.break()
         }
 
         loop.breakable {
-            for (i <- 1 until 8)
+            for (i <- 1 until 8 - y)
                 val piece = board.getPiece(x, y + i)
-                moves.appended(getMove(board, x, y + i))
+                moves += getMove(board, x, y + i)
                 if piece != null then
                     loop.break()
         }
 
         loop.breakable {
-            for (i <- 1 until 8)
+            for (i <- 1 to y + 1)
                 val piece = board.getPiece(x, y - i)
-                moves.appended(getMove(board, x, y - i))
+                moves += getMove(board, x, y - i)
                 if piece != null then
                     loop.break()
         }
 
-        removeNullFromMoves(moves)
+        removeNullFromMoves(moves.toList)
 
     def getMove(board: Board, xTo: Int, yTo: Int): Move =
         var move: Move = null
@@ -115,11 +115,11 @@ abstract class Piece(var x: Int, var y: Int, val color: PieceColor,
         move;
 
     def removeNullFromMoves(list: List[Move]): List[Move] =
-        var moves = List[Move]()
+        val moves = ListBuffer[Move]()
         for (mv <- list)
             if mv != null then
-                moves = moves.appended(mv)
-        moves
+                moves += mv
+        moves.toList
 
     override def toString: String = color.shortcut + pieceType.shortcut + " "
 
@@ -161,7 +161,7 @@ class Queen(x: Int, y: Int, color: PieceColor) extends Piece(x, y, color, QUEEN,
     override def getPossibleMoves(board: Board): List[Move] =
         val diagonal = getPossibleDiagonalMoves(board)
         val horizontal = getPossibleHorizontalMoves(board)
-        horizontal.appendedAll(diagonal)
+        diagonal.concat(diagonal)
 
     override def clone(): AnyRef = new Queen(x, y, color)
 }
@@ -181,14 +181,14 @@ class King(x: Int, y: Int, color: PieceColor) extends Piece(x, y, color, KING, K
         moves += getCastleQueenSideMove(board)
         removeNullFromMoves(moves.toList)
 
-    def getCastleKingSideMove(board: Board): Move =
+    private def getCastleKingSideMove(board: Board): Move =
         val pieceInCorner = board.getPiece(x + 3, y)
         if !canCastle(pieceInCorner, board) then return null
         if board.getPiece(x + 1, y) != null || board.getPiece(x + 2, y) != null then
             return null
         new Move(x, y, x + 2, y)
 
-    def getCastleQueenSideMove(board: Board): Move =
+    private def getCastleQueenSideMove(board: Board): Move =
         val pieceInCorner = board.getPiece(x - 4, y)
         if !canCastle(pieceInCorner, board) then return null
         if board.getPiece(x + 1, y) != null || board.getPiece(x - 2, y) != null || board.getPiece(x - 3, y) != null then
@@ -213,7 +213,7 @@ class Pawn(x: Int, y: Int, color: PieceColor) extends Piece(x, y, color, PAWN, P
 
         if board.getPiece(x, y + direction) == null then
             moves += getMove(board, x, y + direction)
-        if isStartingPosition() && board.getPiece(x, y + direction) == null
+        if isStartingPosition && board.getPiece(x, y + direction) == null
             && board.getPiece(x, y + direction * 2) == null then
             moves += getMove(board, x, y + direction * 2)
 
@@ -224,7 +224,7 @@ class Pawn(x: Int, y: Int, color: PieceColor) extends Piece(x, y, color, PAWN, P
 
         removeNullFromMoves(moves.toList)
 
-    def isStartingPosition(): Boolean =
+    private def isStartingPosition: Boolean =
         if color == BLACK then y == 1
         else y == 8 - 2
 
